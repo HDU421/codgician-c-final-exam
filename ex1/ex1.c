@@ -27,7 +27,8 @@ int monthDayNum[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30 ,31};
 void flushStdin();
 void printErrorMsg();
 _Bool isLeapYear(int year);
-_Bool isNumber(char* str);
+_Bool isNumber(char *str);
+_Bool isPositive(char *str);
 Date getInput(char *str);
 _Bool valiDateInput(Date a);
 char* getSuffix(int n);
@@ -65,10 +66,15 @@ _Bool isLeapYear(int year)
 }
 
 // This function checks whether a given string is number.
-_Bool isNumber(char* str)
+_Bool isNumber(char *str)
 {
+    if (str[0] != '+' && str[0] != '-' && (str[0] < '0' || str[0] > '9'))
+    {
+        return false;
+    }
+
     int i;
-    for (i = 0; i < strlen(str); i++)
+    for (i = 1; i < strlen(str); i++)
     {
         if (str[i] < '0' || str[i] > '9')
             return false;
@@ -77,8 +83,43 @@ _Bool isNumber(char* str)
     return true;
 }
 
+// This function checks whether a given string number is zero.
+_Bool isZero(char *str)
+{
+    if (str[0] != '+' && str[0] != '-' && str[0] != '0')
+    {
+        return false;
+    }
+
+    int i;
+    for (i = 1; i < strlen(str); i++)
+    {
+        if (str[i] != '0')
+            return false;
+    }
+
+    return true;
+}
+
+// This function checks whether a given string number is positive,
+// and erase the sign if it exists.
+_Bool isPositive(char *str)
+{
+    if (str[0] == '-')
+    {
+        strcpy(str, str + 1);
+        return false;
+    }
+    else if (str[0] == '+')
+    {
+        strcpy(str, str + 1);
+    }
+
+    return true;
+}
+
 // This function retrieves user input.
-Date getInput(char* str)
+Date getInput(char *str)
 {
     Date d;
     char yearBuffer[BUFFER_SIZE], monthBuffer[BUFFER_SIZE], dayBuffer[BUFFER_SIZE];
@@ -86,20 +127,64 @@ Date getInput(char* str)
     sscanf(str, "%s%s%s", yearBuffer, monthBuffer, dayBuffer);
 
     if (isNumber(yearBuffer))
-        // Only the last three digits are required to check whether it is leap year.
-        d.year = atoi(yearBuffer + strlen(yearBuffer) - 3);
+    {
+        if (isZero(yearBuffer))
+        {
+            // Year zero does not exist.
+            d.year = -1;
+        }
+        else if (isPositive(yearBuffer))
+        {
+            if (strlen(yearBuffer) <= 4)
+            {
+                d.year = atoi(yearBuffer);
+            }
+            else
+            {
+                // Only the last three digits are required to check whether it is leap year.
+                d.year = atoi(yearBuffer + strlen(yearBuffer) - 4);
+            }
+        }
+        else
+        {
+            // Apply different policy if the year given is Before Christmas (extra -1).
+            if (strlen(yearBuffer) <= 4)
+            {
+                 d.year = atoi(yearBuffer) - 1;
+            }
+            else
+            {
+                // Only the last three digits are required to check whether it is leap year.
+                d.year = atoi(yearBuffer + strlen(yearBuffer) - 4) - 1;
+                if (d.year == -1)
+                {
+                    d.year = 3;
+                }
+            }
+        }
+    }
     else
+    {
         d.year = -1;
+    }
 
     if (strlen(monthBuffer) > 0 && strlen(monthBuffer) < 3 && isNumber(monthBuffer))
+    {
         d.month = atoi(monthBuffer);
+    }
     else
+    {
         d.month = -1;
+    }
 
     if (strlen(monthBuffer) > 0 && strlen(monthBuffer) < 3 && isNumber(dayBuffer))
+    {
         d.day = atoi(dayBuffer);
+    }
     else
+    {
         d.day = -1;
+    }
 
     return d;
 }
@@ -122,9 +207,13 @@ _Bool validateInput(Date a)
 
     // Process leap year.
     if (isLeapYear(a.year))
+    {
         monthDayNum[1] = 29;
+    }
     else
+    {
         monthDayNum[1] = 28;
+    }
 
     // Validate day.
     if (a.day < 0 || a.day > monthDayNum[a.month - 1])
@@ -190,7 +279,9 @@ int main()
     {
         // Do not process ENTER.
         if (buffer[0] == '\n')
+        {
             continue;
+        }
 
         // Flush stdin if user input exceeds buffer size.
         if (strlen(buffer) == BUFFER_SIZE - 1)
@@ -203,7 +294,9 @@ int main()
 
         // Validate input.
         if (!validateInput(d))
-            continue;
+        {
+             continue;
+        }
 
         int ans = getAnswer(d);
         printf("This is the %d%s day.\n\n", ans, getSuffix(ans));
